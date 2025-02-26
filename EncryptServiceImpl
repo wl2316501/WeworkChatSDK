@@ -1,0 +1,84 @@
+package com.byd.bigdata.eis.module.aiasst.service.chatdata;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import sun.security.util.DerInputStream;
+import sun.security.util.DerValue;
+
+import javax.crypto.Cipher;
+import java.math.BigInteger;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.spec.RSAPrivateCrtKeySpec;
+import java.util.Base64;
+
+@Slf4j
+@Service("EncryptService")
+public class EncryptServiceImpl implements EncryptService {
+
+//    @Resource
+//    private WeWorkEncryptConfig encryptConfig;
+    private static final String privKeyPEM = "-----BEGIN RSA PRIVATE KEY-----\n" +
+            "MIIEpAIBAAKCAQEAweRSrkf9n3kuIh1mN/d0mSUF7rGxvzX/bgeJxCZMtNGKzGts\n" +
+            "xdsXkndMksN6u3ysWHIa2Esay5ljBRT23j5gxR0H3FQs3jOG3rt/dAkcVMOj69MC\n" +
+            "/T0W2T9mvNR6IJQR0DUbphwFEmKPKGOvungijxcSiJR9XcihVvnPqAGqU6A+JBEj\n" +
+            "KaRpt6XCiUKl9dnoHHn+E+sa77L1/FsLeah5bQVD1xlLUH5z4JCYtObltA8rkEq5\n" +
+            "x19pmgmzEb+3b4xSH7OefrjSdC/THtMXL8YvIJxtRZyL/rYtgRlZaCeYoEtzQAzQ\n" +
+            "tFkWvpp2rc8JN59wqe/xze9ujA2foWrk/Z/5QwIDAQABAoIBAQCdOuMVc0mnPaR8\n" +
+            "g6y1q9SAr/Y8lxpVvZsSBcjhKFHBu767gE2nsMBPxLByv1RSn4o++uDsDxN+kTcs\n" +
+            "EtESbjEZBy6trBDqa4xuKEv1s8GmtzPBc88Tvqs9pt1QOVmD+67qUXbHYCd4vjXr\n" +
+            "AdOp+evEb2hXG1sCZ0T2fAO58QfHYVqpWjKj6xsPdBjq0Ktn0podK3w6ZEanEax/\n" +
+            "ynJvNxVb4qMcC5btojzcvqwqwlMURSqbl5ptkFI4bjE56wwX3koj7R9vKN9N1DtV\n" +
+            "HWdMEuiRB9tPpvH+p5uhLTDTclqfBR6wkjjtJT3l+8DA2vtfbaWBbKCudox34Msf\n" +
+            "EFzo4R3hAoGBAPUKYn61chZ5e/J1hE127mv8uT/lIzzmrgz5ETsAS+gNfGGcpuoj\n" +
+            "kwC+gmW6k9rjr1xcrfNpHcHOl320Sc4gMqKUJU51OOGlmpQJK6b/V4EJU+PchCcq\n" +
+            "h2ik69pj059R94bxXoMx6chkbQj0uwj2orC1JmlQtmVPtfHGI/QDC5/xAoGBAMqQ\n" +
+            "Tnr/hma/v/FZQArpIBFRTDth2mI6DgVwyy8HXo8w9EimK8lT6aGfQHXSRzjaIeCv\n" +
+            "BysHSCAv/BoSRUOq99BMvacJKAI7RXxP2rzHAF9LanJlsDzDS9GqKxtegaOHFUUG\n" +
+            "EdbNWloTZeKehfI+d8lFnu+SnmzCBdy6DAs6+SBzAoGAV7ozDxgY01EE/gXyquUk\n" +
+            "cMbW77gySHBx6bUV5SCzDE4ftLanz3WTAJY0CwWkP556Pr/ziwycGbHD7L4qGkDO\n" +
+            "wAP340H2blqin9M0rKIICuty/EYLjhYcymsZAWPx9L0cuFQbuS6aeyLxIl6zw37B\n" +
+            "OjBwow3Bbz39bqS4ZHjepZECgYAe6uW/qk7GUhAm81tuDuUhH4qGKcpeYcQQGoY4\n" +
+            "uGQ7cNpoWEyonxEy5Q6+rQjH6atwEucCL0tX9lsBU7aUvHy0o3HzE9eyd3+EmN+n\n" +
+            "Hqy03trxeQnsTFa/Orz3oXYiEpUxgtqoMZHP29QaQd3p+pTn+KNop7VcnkSsywzZ\n" +
+            "jffGdwKBgQDnn2n/wAdPqBnevKzlX0WSZghl4Dphq9JB4qlNUug0383q5MrBjxOK\n" +
+            "eSjY+AycDZNagMQcCrFn8AlOOHWO7Gp5Pg0Q9nTXQzhbBa66oq2cHRBJr/PaOvfA\n" +
+            "sK05QopXET8q4+pwJ5ZqzgtWFJ3qv2MnJ1rtdEOgvuT+XbxjVic77w==\n" +
+            "-----END RSA PRIVATE KEY-----";
+//    private String getPriKey(Integer publicKeyVer) {
+//        return encryptConfig.getPrivateKey().get(String.valueOf(publicKeyVer));
+//    }
+
+    public  String decodeEncryptRandomKey(Integer publicKeyVer,String encryptRandomKey,String primaryKey)  {
+//        String key = getPriKey(publicKeyVer);
+        String s = null;
+        String privKeyPEMnew = primaryKey.replaceAll("\\n", "").replace("-----BEGIN RSA PRIVATE KEY-----", "").replace("-----END RSA PRIVATE KEY-----", "");
+        byte[] bytes = Base64.getDecoder().decode(privKeyPEMnew);
+        try{
+            DerInputStream derReader = new DerInputStream(bytes);
+            DerValue[] seq = derReader.getSequence(0);
+            BigInteger modulus = seq[1].getBigInteger();
+            BigInteger publicExp = seq[2].getBigInteger();
+            BigInteger privateExp = seq[3].getBigInteger();
+            BigInteger prime1 = seq[4].getBigInteger();
+            BigInteger prime2 = seq[5].getBigInteger();
+            BigInteger exp1 = seq[6].getBigInteger();
+            BigInteger exp2 = seq[7].getBigInteger();
+            BigInteger crtCoef = seq[8].getBigInteger();
+
+            RSAPrivateCrtKeySpec keySpec = new RSAPrivateCrtKeySpec(modulus, publicExp, privateExp, prime1, prime2, exp1, exp2, crtCoef);
+            KeyFactory keyFactory = KeyFactory.getInstance("RSA");
+            PrivateKey privateKey = keyFactory.generatePrivate(keySpec);
+            // 64位解码加密后的字符串
+            byte[] inputByte = Base64.getMimeDecoder().decode(encryptRandomKey);
+            Cipher cipher = Cipher.getInstance("RSA");
+            cipher.init(Cipher.DECRYPT_MODE, privateKey);
+            s = new String(cipher.doFinal(inputByte));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        return s;
+    }
+
+}
